@@ -99,7 +99,6 @@ public class GifGenerator {
 
 				// Set up the background for transparency.
 				g.setColor(Color.MAGENTA);
-				g.drawRect(0, 0, targetWidth, targetHeight);
 
 				// Three transformations are applied to the new frame:
 				// 1. Origin is moved so that the bottom right corner after scaling matches the original
@@ -115,8 +114,7 @@ public class GifGenerator {
 				// to smaller chance of pure magenta getting changed into some blended color.
 				// Dithering is handled by the gif writer.
 				Map<RenderingHints.Key, Object> renderingHints = new HashMap<>();
-				renderingHints.put(RenderingHints.KEY_INTERPOLATION,
-						RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+				renderingHints.put(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 				renderingHints.put(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
 				renderingHints.put(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_DISABLE);
 
