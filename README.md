@@ -25,7 +25,7 @@ pprxmtr is a system that consists of a Slack App and a bunch of AWS Lambda funct
 2. Open pom.xml
 3. Set missing properties: aws.user.id, s3.bucket.name, slack.oauth.token, slack.verification.token, slack.client.id, slack.client.secret.
 4. Change other properties as you see fit, relevant ones are defaultLocale, aws.region and node debug settings. Maven resources plugin will populate serverless.yml files with relevant properties.
-5. It might be best to narrow down the permissions given to the Lambda functions in serverless.yml before going to production! **Note** Maven resources plugin generates the actual serverless.yml used, always make your edits to the ones in serverless subfolder. 
+5. It might be best to narrow down the permissions given to the Lambda functions in serverless.yml before going to production! **Note** Maven resources plugin generates the actual serverless.yml used, always make your edits to the ones in serverless subfolder.
 6. Once you feel like ready to deploy the app, run
 ```
 mvn clean install
@@ -38,6 +38,8 @@ mvn clean package
 7. If everything went well, you should now have two serverless stacks deployed and AWS backend ready to receive slash commands from Slack.
 8. Take note of the POST endpoint created for service pprxmtr-request-handler, this will be the request URL that you have to hook your Slack slash command to.
 
+# AWS "architecture"
+![AWS "architecture"](https://raw.githubusercontent.com/villeau/pprxmtr/master/images/Pprxmtr-AWS.png)
 
 ## License
 This program and the accompanying materials are made available under the
