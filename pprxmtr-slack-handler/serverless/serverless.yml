@@ -1,0 +1,90 @@
+service: pprxmtr-request-handler
+plugins:
+- serverless-webpack
+custom:
+  slack_enable_logging: ${node.log.debug.enabled}
+  slack_table_name: Teams
+  slack_event_path: slack
+  slack_install_path: pprxmtr-install
+  slack_install_redirect: https://slack.com
+  slack_verification_token: ${slack.verification.token}
+  slack_client_scopes: bot commands incoming-webhook
+  slack_client_id: ${slack.client.id}
+  slack_client_secret: ${slack.client.secret}
+provider:
+  name: aws
+  runtime: nodejs6.10
+  stage: dev
+  region: ${aws.region}
+  iamRoleStatements:
+  - Effect: Allow
+    Action:
+    - lambda:*
+    - sns:*
+    - logs:*
+    - dynamodb:DescribeTable
+    - dynamodb:Query
+    - dynamodb:Scan
+    - dynamodb:GetItem
+    - dynamodb:PutItem
+    - dynamodb:UpdateItem
+    - dynamodb:DeleteItem
+    Resource: '*'
+  environment:
+    DEBUG: ${node.log.debug.enabled}
+    ERROR: ${node.log.error.enabled}
+    LOCALE: ${defaultLocale}
+    REGION: ${aws.region}
+    USER_ID: ${aws.user.id}
+    OAUTH_ACCESS_TOKEN: ${slack.oauth.token}
+    TABLE_NAME: ${self:custom.slack_table_name}
+    CLIENT_ID: ${self:custom.slack_client_id}
+    CLIENT_SECRET: ${self:custom.slack_client_secret}
+    CLIENT_SCOPES: ${self:custom.slack_client_scopes}
+    INSTALL_REDIRECT: ${self:custom.slack_install_redirect}
+    VERIFICATION_TOKEN: ${self:custom.slack_verification_token}
+    ENABLE_LOGGING: ${self:custom.slack_enable_logging}
+functions:
+  slack:
+    handler: index.handler
+    events:
+    - http:
+        path: ${self:custom.slack_event_path}
+        method: post
+        integration: lambda
+        response:
+          template: $input.path('$')
+    - http:
+        path: ${self:custom.slack_install_path}
+        method: get
+        integration: lambda
+        request:
+          parameters:
+            querystrings:
+              code: true
+              state: true
+        response:
+          statusCodes:
+            201:
+              pattern: ''
+            301:
+              pattern: http.*
+              headers:
+                Location: integration.response.body.errorMessage
+                Cache-Control: '''no-cache, no-store, must-revalidate'''
+resources:
+  Resources:
+    TeamsDynamoDbTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.slack_table_name}

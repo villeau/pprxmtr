@@ -1,0 +1,177 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>fi.pnsr</groupId>
+	<artifactId>pprxmtr</artifactId>
+	<packaging>pom</packaging>
+	<version>1.0-SNAPSHOT</version>
+	<name>pprxmtr</name>
+
+	<modules>
+		<module>pprxmtr-common</module>
+		<module>pprxmtr-file-fetcher</module>
+		<module>pprxmtr-gif-generator</module>
+		<module>pprxmtr-deploy</module>
+		<module>pprxmtr-slack-handler</module>
+	</modules>
+
+	<properties>
+		<aws.lambda.version>1.11.250</aws.lambda.version>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<defaultLocale>fi</defaultLocale>
+		<node.log.debug.enabled>true</node.log.debug.enabled>
+		<node.log.error.enabled>true</node.log.error.enabled>
+		<aws.region>us-east-1</aws.region>
+		<aws.user.id></aws.user.id>
+		<s3.bucket.name></s3.bucket.name>
+		<slack.oauth.token></slack.oauth.token>
+		<slack.verification.token></slack.verification.token>
+		<slack.client.id></slack.client.id>
+		<slack.client.secret></slack.client.secret>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.7.0</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.0.2</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>3.0.0-M1</version>
+				<executions>
+					<execution>
+						<id>enforce-property</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireProperty>
+									<property>aws.region</property>
+									<message>You must set aws.region property!</message>
+									<regex>.*[a-zA-Z0-9_-].*</regex>
+								</requireProperty>
+								<requireProperty>
+									<property>aws.user.id</property>
+									<message>You must set aws.client.id property!</message>
+									<regex>.*\d{12}.*</regex>
+									<regexMessage>AWS client id is a sequence of 12 digits.</regexMessage>
+								</requireProperty>
+								<requireProperty>
+									<property>s3.bucket.name</property>
+									<message>You must set s3.bucket.name property!</message>
+									<regex>.*[a-zA-Z0-9_-].*</regex>
+								</requireProperty>
+								<requireProperty>
+									<property>slack.oauth.token</property>
+									<message>You must set slack.oauth.token property!</message>
+									<regex>.*[a-zA-Z0-9_-].*</regex>
+								</requireProperty>
+								<requireProperty>
+									<property>slack.verification.token</property>
+									<message>You must set slack.verification.token property!</message>
+									<regex>.*[a-zA-Z0-9_-].*</regex>
+								</requireProperty>
+								<requireProperty>
+									<property>slack.client.id</property>
+									<message>You must set slack.client.id property!</message>
+									<regex>.*[a-zA-Z0-9_-].*</regex>
+								</requireProperty>
+								<requireProperty>
+									<property>slack.client.secret</property>
+									<message>You must set slack.client.secret property!</message>
+									<regex>.*[a-zA-Z0-9_-].*</regex>
+								</requireProperty>
+							</rules>
+							<fail>true</fail>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-lambda-java-core</artifactId>
+			<version>1.2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-lambda</artifactId>
+			<version>${aws.lambda.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-sns</artifactId>
+			<version>${aws.lambda.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-s3</artifactId>
+			<version>${aws.lambda.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-lambda-java-events</artifactId>
+			<version>2.0.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+			<version>2.8.5</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.8.5</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+			<version>2.8.5</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-collections4</artifactId>
+			<version>4.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-api</artifactId>
+			<version>2.10.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>2.10.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-lambda-java-log4j2</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+	</dependencies>
+</project>

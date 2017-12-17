@@ -1,0 +1,50 @@
+service: pprxmtr
+package:
+  individually: true
+provider:
+  name: aws
+  runtime: java8
+  stage: dev
+  region: ${aws.region}
+  iamRoleStatements:
+  - Effect: Allow
+    Action:
+    - lambda:*
+    - sns:*
+    - s3:*
+    Resource: '*'
+  - Effect: Allow
+    Action:
+    - s3:*
+    Resource: '["arn:aws:s3:::${s3.bucket.name}"]'
+functions:
+  handle-emoji:
+    handler: fi.pnsr.pprxmtr.filefetcher.Handler
+    timeout: 10
+    events:
+    - sns:
+        topicName: handle-emoji
+        displayName: Handles approximation request from Slack
+    - sns:
+        topicName: s3-file-ready
+        displayName: Receives events when approximated image is ready.
+    - sns:
+        topicName: gif-generator-error
+        displayName: Receives error events from Gif Generator.
+    package:
+      artifact: ../pprxmtr-file-fetcher/target/pprxmtr-file-fetcher-1.0-SNAPSHOT.jar
+  generate-gif:
+    handler: fi.pnsr.pprxmtr.gifgenerator.GifGeneratorHandler
+    timeout: 10
+    events:
+    - sns:
+        topicName: generate-gif
+        displayName: Gif Generator
+    package:
+      artifact: ../pprxmtr-gif-generator/target/pprxmtr-gif-generator-1.0-SNAPSHOT.jar
+resources:
+  Resources:
+    S3BucketApproximatedGifs:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${s3.bucket.name}
