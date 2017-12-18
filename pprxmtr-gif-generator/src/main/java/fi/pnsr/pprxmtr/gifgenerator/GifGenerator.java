@@ -137,7 +137,6 @@ public class GifGenerator {
 					BufferedImage.TYPE_INT_ARGB);
 			Graphics2D g = processedImage.createGraphics();
 			g.setColor(Color.MAGENTA);
-			g.fillRect(0, 0, targetWidth, targetHeight);
 			g.drawRenderedImage(image, null);
 
 			GIFFrame frame = new GIFFrame(processedImage, 40, GIFFrame.DISPOSAL_RESTORE_TO_BACKGROUND,
