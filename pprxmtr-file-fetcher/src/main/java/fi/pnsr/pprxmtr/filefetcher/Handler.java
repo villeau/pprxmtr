@@ -95,7 +95,7 @@ public class Handler implements RequestHandler<SNSEvent, ApiGatewayResponse> {
 
 				resourceBundle = ResourceBundle.getBundle("Messages", new Locale(json.get("locale").asText()));
 				JsonNode emojiJson = mapper.readTree(slackApiResponseContent).get("emoji");
-				String emojiName = StringUtils.strip(json.get("text").asText());
+				String emojiName = StringUtils.removeAll(StringUtils.strip(json.get("text").asText()), ":");
 
 				// 2. Check if the emoji given is an existing custom emoji or an alias to one.
 				if (emojiJson.has(emojiName)) {
