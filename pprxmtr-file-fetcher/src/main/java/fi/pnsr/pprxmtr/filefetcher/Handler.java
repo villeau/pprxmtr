@@ -95,7 +95,8 @@ public class Handler implements RequestHandler<SNSEvent, ApiGatewayResponse> {
 
 				resourceBundle = ResourceBundle.getBundle("Messages", new Locale(json.get("locale").asText()));
 				JsonNode emojiJson = mapper.readTree(slackApiResponseContent).get("emoji");
-				String emojiName = StringUtils.removeAll(StringUtils.strip(json.get("text").asText()), ":");
+				String emojiNameUnfiltered = StringUtils.strip(json.get("text").asText());
+				String emojiName = StringUtils.removeAll(emojiNameUnfiltered, ":");
 
 				// 2. Check if the emoji given is an existing custom emoji or an alias to one.
 				if (emojiJson.has(emojiName)) {
@@ -123,17 +124,17 @@ public class Handler implements RequestHandler<SNSEvent, ApiGatewayResponse> {
 
 					// 3. If the emoji wasn't a custom emoji or an alias to one, check if it's a
 					// valid link to an arbitrary image.
-				} else if (UrlValidator.getInstance().isValid(emojiName)) {
+				} else if (UrlValidator.getInstance().isValid(emojiNameUnfiltered)) {
 
 					String filenamePrefix = CharMatcher.inRange('a', 'z').or(CharMatcher.inRange('0', '9'))
-							.retainFrom(StringUtils.substringAfterLast(emojiName, "/")) + "_approximated_";
+							.retainFrom(StringUtils.substringAfterLast(emojiNameUnfiltered, "/")) + "_approximated_";
 					String s3Key = S3.getS3KeyFromBucket(filenamePrefix);
 
 					if (StringUtils.isNotEmpty(s3Key)) {
 						LOG.info("Emoji already approximated, just return URL!");
 						sendSlackImageResponse(json, s3Key);
 					} else {
-						retrieveImageAndSendToGifGenerator(mapper, json, client, emojiName);
+						retrieveImageAndSendToGifGenerator(mapper, json, client, emojiNameUnfiltered);
 					}
 
 					// 4. Finally check if the emoji given is a standard emoji that cannot currently
