@@ -1,6 +1,5 @@
 package fi.pnsr.pprxmtr.gifgenerator;
 
-import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -23,7 +22,11 @@ import fi.pnsr.pprxmtr.gifgenerator.AnimatedGIFWriter.GIFFrame;
 
 public class GifGenerator {
 
+	private static final int FRAME_DELAY_IN_MS = 33;
+
 	private static final Logger LOG = LogManager.getLogger();
+
+	private static final int NUMBER_OF_ANIMATED_FRAMES = 14;
 
 	private static final int TARGET_SIZE_IN_PIXELS = 96;
 
@@ -42,17 +45,16 @@ public class GifGenerator {
 
 			LOG.debug("Original image dimensions: {}x{}", originalWidth, originalHeight);
 
-			double aspectRatio = (double) originalWidth / (double) originalHeight;
+			int targetWidth = Math.min(originalWidth, TARGET_SIZE_IN_PIXELS);
+			int targetHeight = Math.min(originalHeight, TARGET_SIZE_IN_PIXELS);
 
-			LOG.debug("Aspect ratio: {}", aspectRatio);
-
-			int targetWidth = originalWidth > TARGET_SIZE_IN_PIXELS ? TARGET_SIZE_IN_PIXELS : originalWidth;
-			int targetHeight = originalHeight > TARGET_SIZE_IN_PIXELS ? TARGET_SIZE_IN_PIXELS : originalHeight;
 			if (originalWidth > originalHeight) {
-				targetHeight = (int) Precision.round(targetHeight / aspectRatio, 0);
+				double downscaleRatio = (double) targetWidth / (double) originalWidth;
+				targetHeight = (int) Precision.round(downscaleRatio * originalHeight, 0);
 				LOG.debug("New target height is {}", targetHeight);
 			} else if (originalHeight > originalWidth) {
-				targetWidth = (int) Precision.round(targetWidth * aspectRatio, 0);
+				double downscaleRatio = (double) targetHeight / (double) originalHeight;
+				targetWidth = (int) Precision.round(downscaleRatio * originalWidth, 0);
 				LOG.debug("New target width is {}", targetWidth);
 			}
 
@@ -80,25 +82,21 @@ public class GifGenerator {
 			// origin is.
 			double shearX = -0.05;
 			double shearY = 0.00;
-			int shearCompensation = 4;
+			int shearCompensation = (int) Precision.round(targetWidth / 24, 0);
 
 			// Initial scaling values. Y axis scale value is decremented after every frame
 			// in order to create a better approximation of falling gradually.
 			double scaleX = 0.95;
 			double scaleY = 0.95;
+			double yScaleDecrement = 0.03;
 
-			int numberOfAnimatedFrames = 15;
-			for (int i = 0; i < numberOfAnimatedFrames; ++i) {
+			for (int i = 0; i < NUMBER_OF_ANIMATED_FRAMES; ++i) {
 
 				int newX = (int) (image.getWidth() * scaleX);
 				int newY = (int) (image.getHeight() * scaleY);
 
-				BufferedImage processedImage = new BufferedImage(image.getWidth(), image.getHeight(),
-						BufferedImage.TYPE_INT_ARGB);
+				BufferedImage processedImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 				Graphics2D g = processedImage.createGraphics();
-
-				// Set up the background for transparency.
-				g.setColor(Color.MAGENTA);
 
 				// Three transformations are applied to the new frame:
 				// 1. Origin is moved so that the bottom right corner after scaling matches the original
@@ -109,12 +107,10 @@ public class GifGenerator {
 				g.scale(scaleX, scaleY);
 				g.shear(shearX, shearY);
 
-				// Nearest neighbor has slightly worse image quality than other interpolation
-				// methods but less likely to result artifacts in transparency calculations due
-				// to smaller chance of pure magenta getting changed into some blended color.
+				// Bicubic interpolation results in better image quality in downscaled images.
 				// Dithering is handled by the gif writer.
 				Map<RenderingHints.Key, Object> renderingHints = new HashMap<>();
-				renderingHints.put(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+				renderingHints.put(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
 				renderingHints.put(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
 				renderingHints.put(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_DISABLE);
 
@@ -123,27 +119,21 @@ public class GifGenerator {
 
 				// Set the newly created frame as basis for the next one.
 				image = processedImage;
-				scaleY -= 0.04;
+				scaleY -= yScaleDecrement;
 
 				// Write the new frame to the gif. GIFFrame.DISPOSAL_RESTORE_TO_BACKGROUND is
 				// needed to make sure that the next frame starts from a blank slate.
-				GIFFrame frame = new GIFFrame(processedImage, 40, GIFFrame.DISPOSAL_RESTORE_TO_BACKGROUND,
-						Color.MAGENTA.getRGB());
+				// Last empty frame is displayed longer to make the gif feel more "natural".
+				GIFFrame frame = null;
+				if (i == NUMBER_OF_ANIMATED_FRAMES - 1) {
+					frame = new GIFFrame(processedImage, 200, GIFFrame.DISPOSAL_RESTORE_TO_BACKGROUND);
+				} else {
+					frame = new GIFFrame(processedImage, FRAME_DELAY_IN_MS, GIFFrame.DISPOSAL_RESTORE_TO_BACKGROUND);
+				}
 				writer.writeFrame(os, frame);
 			}
 
-			// Final empty frame.
-			BufferedImage processedImage = new BufferedImage(image.getWidth(), image.getHeight(),
-					BufferedImage.TYPE_INT_ARGB);
-			Graphics2D g = processedImage.createGraphics();
-			g.setColor(Color.MAGENTA);
-			g.drawRenderedImage(image, null);
-
-			GIFFrame frame = new GIFFrame(processedImage, 40, GIFFrame.DISPOSAL_RESTORE_TO_BACKGROUND,
-					Color.MAGENTA.getRGB());
-			writer.writeFrame(os, frame);
 			writer.finishWrite(os);
-
 			os.close();
 
 		} catch (Exception e) {
@@ -154,5 +144,4 @@ public class GifGenerator {
 		LOG.info("GIF created, returning byte array.");
 		return os.toByteArray();
 	}
-
 }

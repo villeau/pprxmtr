@@ -6,11 +6,16 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.validator.routines.UrlValidator;
+import org.apache.http.HttpHeaders;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -40,21 +45,29 @@ public class GifGeneratorHandler implements RequestHandler<SNSEvent, ApiGatewayR
 		if (CollectionUtils.isNotEmpty(input.getRecords())) {
 			try {
 				JsonNode json = mapper.readTree(input.getRecords().get(0).getSNS().getMessage());
+				byte[] gif = ArrayUtils.EMPTY_BYTE_ARRAY;
 
-				byte[] gif = null;
-				if (json.has("image")) {
-					String base64 = json.get("image").asText();
+				if (json.has("emojiUrl")) {
+					HttpClient client = HttpClientBuilder.create().build();
+					String emojiUrl = json.get("emojiUrl").asText();
+					HttpGet getImageRequest = new HttpGet(emojiUrl);
+					HttpResponse getImageResponse = client.execute(getImageRequest);
+					int getImageStatus = getImageResponse.getStatusLine().getStatusCode();
+					LOG.info("Get image status: {}.", getImageStatus);
 
-					if (StringUtils.isNotBlank(base64)) {
-						LOG.info("Found image {} in message body.", base64);
-						byte[] imageByte = Base64.decodeBase64(base64);
-						gif = GifGenerator.generateGif(imageByte);
+					if (StringUtils.contains(getImageResponse.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue(), "image")) {
+						byte[] imageFile = IOUtils.toByteArray(getImageResponse.getEntity().getContent());
+						gif = GifGenerator.generateGif(imageFile);
+					} else {
+						LOG.error("Given image URL did not return an image according to mime type!");
 					}
 				}
 
 				if (ArrayUtils.isNotEmpty(gif)) {
 					LOG.info("Gif created successfully, storing in S3.");
-					String emojiName = StringUtils.strip(json.get("text").asText());
+					String emoji = json.get("text").asText();
+					String emojiName = StringUtils.removeEnd(StringUtils.removeStart(StringUtils.strip(emoji), ":"), ":");
+					emojiName = emojiName.replaceAll("ä", "a").replaceAll("ö", "o").replaceAll("å", "o");
 
 					InputStream is = new ByteArrayInputStream(gif);
 					ObjectMetadata metadata = new ObjectMetadata();
@@ -67,8 +80,6 @@ public class GifGeneratorHandler implements RequestHandler<SNSEvent, ApiGatewayR
 					}
 
 					String filenamePrefix = emojiName + "_approximated_";
-					filenamePrefix = StringUtils
-							.strip(filenamePrefix.replaceAll("ä", "a").replaceAll("ö", "o").replaceAll("å", "o"));
 					if (!S3.fileExistsInBucket(filenamePrefix)) {
 						S3.storeFileInBucket(filenamePrefix + System.currentTimeMillis() + ".gif", is, metadata);
 					}

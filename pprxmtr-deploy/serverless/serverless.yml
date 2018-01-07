@@ -35,7 +35,7 @@ functions:
       artifact: ../pprxmtr-file-fetcher/target/pprxmtr-file-fetcher-1.0-SNAPSHOT.jar
   generate-gif:
     handler: fi.pnsr.pprxmtr.gifgenerator.GifGeneratorHandler
-    timeout: 10
+    timeout: 20
     events:
     - sns:
         topicName: generate-gif
